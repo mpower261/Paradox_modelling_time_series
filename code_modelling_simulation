@@ -1,0 +1,49 @@
+library(astsa)
+library(forecast)
+############################
+x1=AirPassengers
+#x1=WWWusage
+#x1=chicken
+#x1=sales
+fit=auto.arima(x1,stepwise=FALSE,approximation=FALSE)
+par=fit$coef;lx1=length(x1)
+res1=fit$residuals
+mu=mean(res1);sd=sd(res1)
+s1=acf(res1,20)$acf
+#The portmanteau test
+1-pchisq(lx1*sum(s1[2:21]^2),20)
+#The Kolmogorov-Smirnov test
+ks.test(res1,"pnorm",mu,sd)
+
+ssim=matrix(0,nrow=lx1,ncol=10000)
+ssim[,1]=x1
+for (i in 2:10000){
+#AirPassenger
+ssim1=sarima.sim(ar=c(par[1],par[2]),ma=par[3],d=1, D=1,S=12, n=lx1,innov=rnorm(1210,mu,sd))
+#WWWusage
+#ssim1=sarima.sim(ar=c(par[1],par[2],par[3]),d=1, n=lx1,innov=rnorm(1210,mu,sd))
+#sales
+#ssim1=sarima.sim(ar=c(par[1]),ma=c(par[2]),d=1,n=lx1,innov=rnorm(1210,mu,sd))
+#chicken
+#ssim1=sarima.sim(ar=c(par[1]),ma=c(par[2],par[3]),d=1,sar=c(par[4]),S=12,n=lx1,innov=rnorm(1210,mu,sd))
+while (min(ssim1)<=0){
+#AirPassenger
+ssim1=sarima.sim(ar=c(par[1],par[2]),ma=par[3],d=1, D=1,S=12, n=lx1,innov=rnorm(1210,mu,sd))
+#WWWusage
+#ssim1=sarima.sim(ar=c(par[1],par[2],par[3]),d=1, n=lx1,innov=rnorm(1210,mu,sd))
+#sales
+#ssim1=sarima.sim(ar=c(par[1]),ma=c(par[2]),d=1,n=lx1,innov=rnorm(1210,mu,sd))
+#chicken
+#ssim1=sarima.sim(ar=c(par[1]),ma=c(par[2],par[3]),d=1,sar=c(par[4]),S=12,n=lx1,innov=rnorm(1210,mu,sd))
+}
+ssim[,i]=ssim1
+}
+up=0;lo=0
+for (i in 1:lx1){
+up[i]=quantile(ssim[i,(2:10000)],.99)
+lo[i]=quantile(ssim[i,(2:10000)],.32)
+}
+plot(ssim[,1],type="l",main="AirPassengers",ylab="",xlab="",ylim=c(min(ssim[,1],up),max(ssim[,1],up)))
+lines(up,lty=2)
+lines(lo,lty=2)
+mean(x1<lo)
